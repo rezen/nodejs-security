@@ -1,0 +1,20 @@
+#!/bin/sh
+
+folder=$(pwd);
+files=$(find $folder -type f -name 'package.json' -maxdepth 2);
+
+echo '[i] Checking for bad juju in package.json'
+
+for file in $files; do
+	echo "[i] Checking $file"
+	
+	cd `dirname $file`
+	nsp check package.json --output summary
+
+	if [ $? -ne 0 ]; then
+		exit 3
+	fi 
+done
+
+echo '[i] Looks safe!'
+exit 0

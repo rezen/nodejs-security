@@ -1,0 +1,11 @@
+[0-9]{3}[\.\-][0-9]{2}[\.\-][0-9]{4}
+password(\s{0,})[\:\=]{1}.*
+pass(\s{0,})[\:\=]{1}.*
+passwd(\s{0,})[\:\=]{1}.*
+username(\s{0,})[\:\=]{1}.*
+uname(\s{0,})[\:\=]{1}.*
+(BEGIN\s[A-Z]{0,3}\sPRIVATE\sKEY)
+(END\s[A-Z]{0,3}\sPRIVATE\sKEY)
+SECRET_KEY
+.+?[token|TOKEN](\s{0,})[\:\=]{1}.*
+_auth(Token)?=.+

@@ -1,0 +1,11 @@
+{
+  "name": "bad-packages",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {},
+  "author": "",
+  "dependencies": {
+    "minimatch": "3.0.0"
+  },
+  "license": "MIT"
+}
